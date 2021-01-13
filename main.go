@@ -62,7 +62,6 @@ func main() {
 	// Setup workers
 	testsChan := make(chan SmuggleTest)
 	resultsChan := make(chan SmuggleTest)
-	errChan := make(chan error)
 
 	workersWg := sync.WaitGroup{}
 	workersWg.Add(conf.Workers)
@@ -77,7 +76,7 @@ func main() {
 			Headers: headers,
 			Timeout: 5 * time.Second,
 		}
-		go workers[i].Test(testsChan, resultsChan, errChan, workersWg.Done)
+		go workers[i].Test(testsChan, resultsChan, workersWg.Done)
 	}
 
 	// Feed input to workers
@@ -187,20 +186,8 @@ func main() {
 		resultsWg.Done()
 	}()
 
-	// Read errors from workers
-	errWg := sync.WaitGroup{}
-	errWg.Add(1)
-	go func() {
-		for err := range errChan {
-			log.Printf("Error: %v\n", err)
-		}
-		errWg.Done()
-	}()
-
 	// Wait for everything to finish
 	workersWg.Wait()
-	close(errChan)
-	errWg.Wait()
 	close(resultsChan)
 	resultsWg.Wait()
 }

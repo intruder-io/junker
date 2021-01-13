@@ -43,6 +43,9 @@ type SmuggleTest struct {
 
 	// The result of the test
 	Result TestResult
+
+	// Any error that caused testing to abort
+	Error error
 }
 
 type Worker struct {
@@ -53,7 +56,7 @@ type Worker struct {
 	Timeout time.Duration
 }
 
-func (w Worker) Test(tests <-chan SmuggleTest, results chan<- SmuggleTest, errors chan<- error, done func()) {
+func (w Worker) Test(tests <-chan SmuggleTest, results chan<- SmuggleTest, done func()) {
 	for t := range tests {
 		r := w.requestBase(t.Url, t.Mutations, t.Method)
 
@@ -67,13 +70,13 @@ func (w Worker) Test(tests <-chan SmuggleTest, results chan<- SmuggleTest, error
 			var timeout bool
 			t.Responses[i], err, timeout = w.sendRequest(t.IP, t.Requests[i], t.Url, w.Timeout)
 			if err != nil {
-				errors <- err
+				t.Error = err
 				t.Result = TEST_RESULT_ERROR
 				break
 			}
 
 			if timeout {
-				errors <- fmt.Errorf("timeout sending request to %s", t.Url.String())
+				t.Error = fmt.Errorf("timeout sending request to %s", t.Url.String())
 				t.Result = TEST_RESULT_TIMEOUT
 				break
 			}
