@@ -34,6 +34,12 @@ type Config struct {
 
 	// The file to output to
 	OutFilename string
+
+	// The timeout to use for HTTP requests
+	Timeout time.Duration
+
+	// The extra headers to include in HTTP requests
+	Headers []string
 }
 
 func main() {
@@ -43,6 +49,8 @@ func main() {
 	flag.IntVarP(&conf.BatchSize, "batch-size", "b", 200, "The number of input lines to process at once, shuffling the tests for each")
 	flag.StringSliceVarP(&conf.Methods, "methods", "m", []string{"POST"}, "HTTP method to test - to test multiple methods specify multiple times")
 	flag.StringVarP(&conf.OutFilename, "output", "o", "junker.json", "The file to output results to, in JSON format - use '-' for stdout")
+	flag.DurationVarP(&conf.Timeout, "timeout", "t", 5*time.Second, "The timeout value to use for HTTP requests")
+	flag.StringSliceVarP(&conf.Headers, "headers", "H", []string{}, "Extra headers to include in requests - to add multiple headers specify multiple times")
 	flag.Parse()
 
 	// Input reading
@@ -66,10 +74,29 @@ func main() {
 	} else {
 		f, err := os.OpenFile(conf.OutFilename, os.O_WRONLY|os.O_CREATE, 0644)
 		if err != nil {
-			fmt.Println("Failed to open output file: %v\n", err)
+			fmt.Printf("Failed to open output file: %v\n", err)
 			os.Exit(1)
 		}
 		logger = log.New(f, "", 0)
+	}
+
+	// Allow header overrriding from command line
+	uaGiven := false
+	connGiven := false
+	for _, h := range conf.Headers {
+		if strings.HasPrefix(h, "User-Agent:") {
+			uaGiven = true
+		} else if strings.HasPrefix(h, "Connection:") {
+			connGiven = true
+		}
+	}
+
+	if !uaGiven {
+		conf.Headers = append(conf.Headers, "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/12.246")
+	}
+
+	if !connGiven {
+		conf.Headers = append(conf.Headers, "Connection: Close")
 	}
 
 	// Misc. setup
@@ -84,14 +111,10 @@ func main() {
 	workersWg.Add(conf.Workers)
 
 	workers := make([]Worker, conf.Workers)
-	headers := []string{
-		"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/12.246",
-		"Connection: Close",
-	}
 	for i := range workers {
 		workers[i] = Worker{
-			Headers: headers,
-			Timeout: 5 * time.Second,
+			Headers: conf.Headers,
+			Timeout: conf.Timeout,
 		}
 		go workers[i].Test(testsChan, resultsChan, workersWg.Done)
 	}
