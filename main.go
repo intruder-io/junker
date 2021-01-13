@@ -31,6 +31,9 @@ type Config struct {
 
 	// The HTTP methods to test
 	Methods []string
+
+	// The file to output to
+	OutFilename string
 }
 
 func main() {
@@ -39,6 +42,7 @@ func main() {
 	flag.IntVarP(&conf.Workers, "workers", "c", 10, "The number of concurrent wokers")
 	flag.IntVarP(&conf.BatchSize, "batch-size", "b", 200, "The number of input lines to process at once, shuffling the tests for each")
 	flag.StringSliceVarP(&conf.Methods, "methods", "m", []string{"POST"}, "HTTP method to test - to test multiple methods specify multiple times")
+	flag.StringVarP(&conf.OutFilename, "output", "o", "junker.json", "The file to output results to, in JSON format - use '-' for stdout")
 	flag.Parse()
 
 	// Input reading
@@ -53,6 +57,19 @@ func main() {
 		scanner = bufio.NewScanner(f)
 	} else {
 		scanner = bufio.NewScanner(os.Stdin)
+	}
+
+	// Output setup
+	var logger *log.Logger
+	if conf.OutFilename == "-" {
+		logger = log.New(os.Stdout, "", 0)
+	} else {
+		f, err := os.OpenFile(conf.OutFilename, os.O_WRONLY|os.O_CREATE, 0644)
+		if err != nil {
+			fmt.Println("Failed to open output file: %v\n", err)
+			os.Exit(1)
+		}
+		logger = log.New(f, "", 0)
 	}
 
 	// Misc. setup
@@ -181,7 +198,7 @@ func main() {
 			if err != nil {
 				log.Printf("Error JSON marshalling test %v: %v\n", r, err)
 			}
-			fmt.Println(string(j))
+			logger.Println(string(j))
 		}
 		resultsWg.Done()
 	}()
