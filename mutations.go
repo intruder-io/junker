@@ -7,5 +7,7 @@ func generateMutations() map[string]string {
 	m["colon-prefix-chars"] = "Content-Length abcd: %s"
 	m["colon-prefix-space"] = "Content-Length : %s"
 
+	m["fake"] = "Not-A-Thing: %s"
+
 	return m
 }

@@ -70,7 +70,7 @@ func main() {
 	workers := make([]Worker, conf.Workers)
 	headers := []string{
 		"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/12.246",
-		"Connection: Keep-Alive",
+		"Connection: Close",
 	}
 	for i := range workers {
 		workers[i] = Worker{
@@ -178,13 +178,11 @@ func main() {
 	resultsWg.Add(1)
 	go func() {
 		for r := range resultsChan {
-			if r.Result != TEST_RESULT_SAFE {
-				j, err := json.Marshal(r)
-				if err != nil {
-					log.Printf("Error JSON marshalling test %v: %v\n", r, err)
-				}
-				fmt.Println(string(j))
+			j, err := json.Marshal(r)
+			if err != nil {
+				log.Printf("Error JSON marshalling test %v: %v\n", r, err)
 			}
+			fmt.Println(string(j))
 		}
 		resultsWg.Done()
 	}()
