@@ -46,6 +46,12 @@ type SmuggleTest struct {
 
 	// Any error that caused testing to abort
 	Error error
+
+	// Time checks strarted
+	Start time.Time
+
+	// Times checks finished
+	End time.Time
 }
 
 type Worker struct {
@@ -63,6 +69,8 @@ func (w Worker) Test(tests <-chan SmuggleTest, results chan<- SmuggleTest, done 
 		t.Requests[0] = []byte(fmt.Sprintf(r, "0", "0"))
 		t.Requests[1] = []byte(fmt.Sprintf(r, "z", "0"))
 		t.Requests[2] = []byte(fmt.Sprintf(r, "0", "z"))
+
+		t.Start = time.Now()
 
 		// Send requests
 		var err error
@@ -99,6 +107,7 @@ func (w Worker) Test(tests <-chan SmuggleTest, results chan<- SmuggleTest, done 
 			}
 		}
 
+		t.End = time.Now()
 		results <- t
 	}
 
