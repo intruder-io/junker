@@ -202,7 +202,7 @@ func compareResponses(r1, r2 []byte) bool {
 	// Response lengths
 	l1 := float64(len(r1))
 	l2 := float64(len(r2))
-	if l1 <= 0.8*l2 || l1 >= 1.2*l2 {
+	if l1 < 0.8*l2 || l1 > 1.2*l2 {
 		return false
 	}
 
