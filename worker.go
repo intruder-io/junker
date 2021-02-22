@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"crypto/tls"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net"
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -199,7 +202,7 @@ func (w Worker) requestBase(u *url.URL, mutationHeaders [2]string, method string
 // compareResponses returns whether HTTP responses r1 and r2 are the same. Responses are
 // considered to be different if one of the following is true:
 //  - the status lines are not equal
-//  - the length of the responses differs by more than 20%
+//, - the length of the response bodies differs by more than 20%
 func compareResponses(r1, r2 []byte) bool {
 	// Check status lines
 	s1 := strings.Split(string(r1), "\n")[0]
@@ -209,11 +212,25 @@ func compareResponses(r1, r2 []byte) bool {
 	}
 
 	// Response lengths
-	l1 := float64(len(r1))
-	l2 := float64(len(r2))
-	if l1 < 0.8*l2 || l1 > 1.2*l2 {
+	l1 := getResponseLength(r1)
+	l2 := getResponseLength(r2)
+	l1f := float64(l1)
+	l2f := float64(l2)
+	if l1f < 0.8*l2f || l1f > 1.2*l2f {
 		return false
 	}
 
 	return true
+}
+
+// getResponseLength gets the length of an HTTP response stored in a byte array
+func getResponseLength(r []byte) int64 {
+	b := bytes.NewReader(r)
+	reader := bufio.NewReader(b)
+	resp, err := http.ReadResponse(reader, nil)
+	if err != nil {
+		return -1
+	}
+
+	return resp.ContentLength
 }
