@@ -129,7 +129,7 @@ func (w Worker) sendRequest(ip net.IP, req []byte, u *url.URL, timeout time.Dura
 			port = "80"
 		}
 	}
-	target := fmt.Sprintf("%s:%s", ip.String(), port)
+	target := net.JoinHostPort(ip.String(), port)
 	if u.Scheme == "https" {
 		conf := &tls.Config{InsecureSkipVerify: true}
 		conn, cerr = tls.DialWithDialer(&net.Dialer{
