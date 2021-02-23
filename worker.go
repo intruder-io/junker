@@ -55,6 +55,9 @@ type SmuggleTest struct {
 
 	// Times checks finished
 	End time.Time
+
+	// How many times has this test been performed?
+	Runs int
 }
 
 type Worker struct {
@@ -63,12 +66,16 @@ type Worker struct {
 
 	// The time to wait for a request
 	Timeout time.Duration
+
+	// How many runs of each test to do
+	Runs int
 }
 
 func (w Worker) Test(tests <-chan SmuggleTest, results chan<- SmuggleTest, done func()) {
 	for t := range tests {
 		r := w.requestBase(t.Url, t.Mutations, t.Method)
 
+		t.Runs = 0
 		t.Requests[0] = []byte(fmt.Sprintf(r, "0", "0"))
 		t.Requests[1] = []byte(fmt.Sprintf(r, "z", "0"))
 		t.Requests[2] = []byte(fmt.Sprintf(r, "0", "z"))
@@ -77,9 +84,14 @@ func (w Worker) Test(tests <-chan SmuggleTest, results chan<- SmuggleTest, done 
 
 		// Send requests
 		var err error
-		for i := 0; i < 3; i++ {
+		for i := 0; i < 3*w.Runs; i++ {
 			var timeout bool
-			t.Responses[i], err, timeout = w.sendRequest(t.IP, t.Requests[i], t.Url, w.Timeout)
+			j := i % 3
+			if j == 0 {
+				t.Runs++
+			}
+
+			t.Responses[j], err, timeout = w.sendRequest(t.IP, t.Requests[j], t.Url, w.Timeout)
 			if err != nil {
 				t.Error = err
 				t.Result = TEST_RESULT_ERROR
@@ -94,16 +106,18 @@ func (w Worker) Test(tests <-chan SmuggleTest, results chan<- SmuggleTest, done 
 
 			// Do the checking as we go to prevent from sending more requests than
 			// necessary
-			if i == 1 && compareResponses(t.Responses[0], t.Responses[1]) {
+			if j == 1 && compareResponses(t.Responses[0], t.Responses[1]) {
 				t.Result = TEST_RESULT_R1_EQUAL_BASELINE
 				break
 			}
 
-			if i == 2 {
+			if j == 2 {
 				if compareResponses(t.Responses[0], t.Responses[2]) {
 					t.Result = TEST_RESULT_R2_EQUAL_BASELINE
+					break
 				} else if compareResponses(t.Responses[1], t.Responses[2]) {
 					t.Result = TEST_RESULT_R1_EQUAL_R2
+					break
 				} else {
 					t.Result = TEST_RESULT_VULNERABLE
 				}
@@ -202,7 +216,7 @@ func (w Worker) requestBase(u *url.URL, mutationHeaders [2]string, method string
 // compareResponses returns whether HTTP responses r1 and r2 are the same. Responses are
 // considered to be different if one of the following is true:
 //  - the status lines are not equal
-//, - the length of the response bodies differs by more than 20%
+//  - the length of the response bodies differs by more than 20%
 func compareResponses(r1, r2 []byte) bool {
 	// Check status lines
 	s1 := strings.Split(string(r1), "\n")[0]

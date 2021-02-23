@@ -40,6 +40,9 @@ type Config struct {
 
 	// The extra headers to include in HTTP requests
 	Headers []string
+
+	// The number of times to check results before marking them as vulnerable
+	Runs int
 }
 
 func main() {
@@ -51,6 +54,7 @@ func main() {
 	flag.StringVarP(&conf.OutFilename, "output", "o", "junker.json", "The file to output results to, in JSON format - use '-' for stdout")
 	flag.DurationVarP(&conf.Timeout, "timeout", "t", 5*time.Second, "The timeout value to use for HTTP requests")
 	flag.StringSliceVarP(&conf.Headers, "headers", "H", []string{}, "Extra headers to include in requests - to add multiple headers specify multiple times")
+	flag.IntVarP(&conf.Runs, "runs", "r", 3, "The number of times to check before flagging a result as vulnerable")
 	flag.Parse()
 
 	// Input reading
@@ -115,6 +119,7 @@ func main() {
 		workers[i] = Worker{
 			Headers: conf.Headers,
 			Timeout: conf.Timeout,
+			Runs:    conf.Runs,
 		}
 		go workers[i].Test(testsChan, resultsChan, workersWg.Done)
 	}
