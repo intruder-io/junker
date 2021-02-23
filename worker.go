@@ -228,8 +228,15 @@ func compareResponses(r1, r2 []byte) bool {
 	// Response lengths
 	l1 := getResponseLength(r1)
 	l2 := getResponseLength(r2)
-	l1f := float64(l1)
-	l2f := float64(l2)
+
+	var l1f, l2f float64
+	if l1 == -1 || l2 == -1 {
+		l1f = float64(len(r1))
+		l2f = float64(len(r2))
+	} else {
+		l1f = float64(l1)
+		l2f = float64(l2)
+	}
 	if l1f < 0.8*l2f || l1f > 1.2*l2f {
 		return false
 	}
