@@ -30,6 +30,7 @@ func generateMutations() map[string]string {
 	m["nospace"] = "Content-Length:%s"
 	m["uppercase"] = "CONTENT-LENGTH: %s"
 	m["hex"] = "Content-Length: 0x%s"
+	m["underscore"] = "Content_Length: %s"
 
 	// Amit Klein's "challenges"
 	m["cr-hyphenated"] = "Content\rLength: %s"
