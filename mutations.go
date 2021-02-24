@@ -28,8 +28,6 @@ func generateMutations() map[string]string {
 	m["double-cr"] = "X-Header: y\r\rContent-Length: %s"
 
 	m["nospace"] = "Content-Length:%s"
-	m["single-quotes"] = "Content-Length: '%s'"
-	m["double-quotes"] = "Content-Length: \"%s\""
 	m["uppercase"] = "CONTENT-LENGTH: %s"
 	m["hex"] = "Content-Length: 0x%s"
 
