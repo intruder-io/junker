@@ -200,7 +200,7 @@ func (w Worker) requestBase(u *url.URL, mutationHeaders [2]string, method string
 
 	r := fmt.Sprintf("%s %s HTTP/1.1\r\n", method, path)
 	r += fmt.Sprintf("Host: %s\r\n", u.Hostname())
-	r += "X-Value: 1"
+	r += "X-Value: 1\r\n"
 	r += mutationHeaders[0] + "\r\n"
 	r += mutationHeaders[1] + "\r\n"
 
