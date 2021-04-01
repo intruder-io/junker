@@ -58,6 +58,34 @@ type SmuggleTest struct {
 
 	// How many times has this test been performed?
 	Runs int
+
+	// Extra tests to be performed in the case that the target is found to be vulnerable
+	ExtraTests ExtraTestsType
+}
+
+// Extra tests for faster triage in the future. These tests will be performed on any
+// vulnerable results. Their results won't affect the target being marked as vulnerable
+
+// Test for CL: 4 on both values actually returning a result. Some don't
+type PositiveLengthTest struct {
+	Request  []byte
+	Response []byte
+	Timeout  bool
+	Error    error
+}
+
+// Testing overstating methodology. The test should be safe and the results informative,
+// even if not conclusive
+type OverstatingTest struct {
+	Requests  [2][]byte
+	Responses [2][]byte
+	Timeouts  [2]bool
+	Errors    [2]error
+}
+
+type ExtraTestsType struct {
+	PositiveLength PositiveLengthTest
+	Overstating    OverstatingTest
 }
 
 type Worker struct {
@@ -122,6 +150,31 @@ func (w Worker) Test(tests <-chan SmuggleTest, results chan<- SmuggleTest, done 
 					t.Result = TEST_RESULT_VULNERABLE
 				}
 			}
+		}
+
+		// Perform extra tests if required
+		if t.Result == TEST_RESULT_VULNERABLE {
+			// Test the positive case R(m1(CL): 4, m2(CL): 4, "z=ab")
+			positiveReq := fmt.Sprintf(r, "4", "4")
+			positiveReq += "z=ab"
+			t.ExtraTests.PositiveLength.Request = []byte(positiveReq)
+			resp, err, timeout := w.sendRequest(t.IP, []byte(positiveReq), t.Url, w.Timeout)
+			t.ExtraTests.PositiveLength.Response = resp
+			t.ExtraTests.PositiveLength.Error = err
+			t.ExtraTests.PositiveLength.Timeout = timeout
+
+			// Testing overstating
+			osReq := r + "z=ab"
+			t.ExtraTests.Overstating.Requests[0] = []byte(fmt.Sprintf(osReq, "6", "4"))
+			t.ExtraTests.Overstating.Requests[1] = []byte(fmt.Sprintf(osReq, "4", "6"))
+
+			for i := 0; i < 2; i++ {
+				resp, err, timeout = w.sendRequest(t.IP, t.ExtraTests.Overstating.Requests[i], t.Url, w.Timeout)
+				t.ExtraTests.Overstating.Responses[i] = resp
+				t.ExtraTests.Overstating.Errors[i] = err
+				t.ExtraTests.Overstating.Timeouts[i] = timeout
+			}
+
 		}
 
 		t.End = time.Now()
@@ -200,7 +253,7 @@ func (w Worker) requestBase(u *url.URL, mutationHeaders [2]string, method string
 
 	r := fmt.Sprintf("%s %s HTTP/1.1\r\n", method, path)
 	r += fmt.Sprintf("Host: %s\r\n", u.Hostname())
-	r += "X-Value: 1\r\n"
+	r += "Content-Type: application/x-www-form-urlencoded\r\n"
 	r += mutationHeaders[0] + "\r\n"
 	r += mutationHeaders[1] + "\r\n"
 
