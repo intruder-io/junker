@@ -188,17 +188,19 @@ func main() {
 						keys = append(keys, k)
 					}
 					for i := range keys {
-						for j := i + 1; j < len(keys); j++ {
-							m1 := conf.Mutations[keys[i]]
-							m2 := conf.Mutations[keys[j]]
+						for _, method := range conf.Methods {
+							for j := i + 1; j < len(keys); j++ {
+								m1 := conf.Mutations[keys[i]]
+								m2 := conf.Mutations[keys[j]]
 
-							t := SmuggleTest{
-								Url:       u,
-								IP:        ip,
-								Method:    "POST",
-								Mutations: [2]string{m1, m2},
+								t := SmuggleTest{
+									Url:       u,
+									IP:        ip,
+									Method:    method,
+									Mutations: [2]string{m1, m2},
+								}
+								tests = append(tests, t)
 							}
-							tests = append(tests, t)
 						}
 					}
 				}
